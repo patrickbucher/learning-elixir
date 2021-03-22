@@ -147,6 +147,8 @@ There are two versions of logical operators:
     - "falsy": `false` and `nil`
     - "truthy": everything that is not "falsy"
 
+Examples:
+
     > true and false
     false
     > true or false
