@@ -352,3 +352,263 @@ The parentheses are optional:
 
 The capture syntax is shorter to type but might be less clear to read
 due to the lack of parameter names.
+
+## Using Pattern Matching to Control the Program Flow
+
+Pattern matching is not the same as assignment:
+
+    > x = 1
+    1
+    > 1 = x
+    1
+    > 2 = x
+    ** (MatchError) no match of right hand side value: 1
+
+Unlike Erlang, Elixir allows rebinding variables:
+
+    > x = 1
+    1
+    > x = 2
+    2
+
+The pin operator `^` makes sure that a match is performed against the value,
+which avoids re-binding:
+
+    > x = 3
+    > x = 4
+    > ^x = 4
+    4
+    > ^x = 5
+    ** (MatchError) no match of right hand side value: 5
+
+Pattern matching can be used to unpack parts of values from expressions
+(_destructuring_):
+
+    > "Patrick " <> lastname = "Patrick Bucher"
+    "Patrick Bucher"
+    > lastname
+    "Bucher"
+
+Tuples can be used to signify success and error of an operation:
+
+    > {:ok, value} = {:ok, 13}
+    {:ok, 13}
+    > {:ok, value} = {:error, :not_found}
+    ** (MatchError) no match of right hand side value: {:error, :not_found}
+
+In general, functions should return `{:ok, result}` in case of success,
+and `{:error, :error_type}` in case of failure.
+
+The underscore `_` matches any value, which is then discarded:
+
+    > {_, _, third, _} = {13, 17, 22, 18}
+    {13, 17, 22, 18}
+    > third
+    22
+
+List elements can be separated using the `|` operator:
+
+    > [head | tail] = [1, 2, 3]
+    [1, 2, 3]
+    > head
+    1
+    > tail
+    [2, 3]
+
+It is possible to match multiple elements on the left side:
+
+    > [a, b | tail] = [1, 2, 3]
+    [1, 2, 3]
+    > a
+    1
+    > b
+    2
+    > tail
+    [3]
+
+Map literals can be written in two ways:
+
+    > user = %{email: "joe.doe@mail.com", password: "topsecret"}
+    %{email: "joe.doe@mail.com", password: "topsecret"}
+
+    > user = %{:email => "joe.doe@mail.com", :password => "topsecret"}
+    %{email: "joe.doe@mail.com", password: "topsecret"}
+
+The first way is more compact, the second way allows for any value in
+the key (not just atoms).
+
+Map values can be extracted by matching keys:
+
+    > %{password: password} = user
+    %{email: "joe.doe@mail.com", password: "topsecret"}
+    > password
+    "topsecret"
+
+Either syntax works:
+
+    > %{:password => password} = user
+    %{email: "joe.doe@mail.com", password: "topsecret"}
+    > password
+    "topsecret"
+
+Maps can not only be matched for certain keys, but also for values:
+
+    > %{email: "joe.doe@mail.com", password: password} = user
+    %{email: "joe.doe@mail.com", password: "topsecret"}
+    > password
+    "topsecret"
+
+Matching and extraction can also be combined:
+
+    > %{email: email = "joe.doe@mail.com"} = user
+    %{email: "joe.doe@mail.com", password: "topsecret"}
+    > email
+    "joe.doe@mail.com"
+
+Pinning accomplishes the same in two steps, which is useful if the value
+to be matched has to be computed beforehand:
+
+    > email = "joe.doe@mail.com"
+    > %{email: ^email} = user
+    %{email: "joe.doe@mail.com", password: "topsecret"}
+    > email
+    "joe.doe@mail.com"
+
+Keyword lists contain two-element tuples that may contain duplicate
+keys:
+
+    > animals = [dog: "Bello", cat: "Pussy", dog: "Doggo", cat: "Whiskers"]
+    [dog: "Bello", cat: "Pussy", dog: "Doggo", cat: "Whiskers"]
+
+They are also used in imports; functions with the same name but
+different arities can be imported:
+
+    > import String, only: [pad_leading: 2, pad_leading: 3]
+
+Structs are maps with a fixed set of keys to represent things such as
+calendar dates. They can be matched like maps:
+
+    > birthday = ~D[1987-06-24]
+    > %{year: year} = birthday
+    > year
+    1987
+
+The match can be refined using the type name:
+
+    > %Date{year: year} = birthday
+    > year
+    1987
+    > %Date{year: year} = %{year: 2005}
+    ** (MatchError) no match of right hand side value: %{year: 2005}
+
+
+_Sigils_ like `~D` are syntactic sugar to build objects from text representations.
+Other examples are the word list sigil `~w` or the reguar expression
+sigil `~r`:
+
+    > ~w(Dilbert Alice Wally)
+    ["Dilbert", "Alice", "Wally"]
+
+    > pattern = ~r/^clean:$/
+    ~r/^clean:$/
+
+Multiple functions with the same signature can be used for pattern
+matching:
+
+    defmodule NumberCompare do
+      def greater(number, other_number) do
+        check(number >= other_number, number, other_number)
+      end
+
+      defp check(true, number, _), do: number
+      defp check(false, _, other_number), do: other_number
+    end
+
+The `check` function has multiple _clauses_, defined with `defp`, so
+that they are not visible from outside of the module. Clauses belonging
+to the same function must stand in a sequence that must not be
+interrupted by other function's clauses.
+
+Default values for function parameters can be defined using the `\\`
+operator:
+
+    defmodule Checkout do
+      def total_cost(price, quantity \\ 10), do: price * quantity
+    end
+
+Internally, two functions are created: one expecting the `quantity`
+parameter, and one having it set already. Only one default value can be
+used for a function definition.
+
+The above function can be captured and used as follows:
+
+    > total_default = &Checkout.total_cost/1
+    > total = &Checkout.total_cost/2
+    > total_default.(2)
+    20
+    > total_default.(2, 10)
+    20
+    value per function.
+
+Guard clauses can be used to control which function clause is executed:
+
+    defmodule NumberCompare do
+      def greater(number, other_number) when number >= other_number, do: number
+      def greater(_, other_number), do: other_number
+    end
+
+The first clause is protected with a guard expression. If it doesn't
+match, the first clause is taken.
+
+Pattern matching and guards can be used in anonymous functions, too:
+
+    number_compare = fn
+      number, other_number when number >= other_number -> number
+      _, other_number -> other_number
+    end
+
+    number_compare.(1, 8)
+    number_compare.(7, 3)
+
+Only authorized functions that are pure can be used in guard
+expressions, e.g. those from the `Integer` module (`even_or_odd.ex`):
+
+    defmodule EvenOrOdd do
+      require Integer
+
+      def check(number) when Integer.is_even(number), do: "even"
+      def check(number) when Integer.is_odd(number), do: "odd"
+    end
+
+    > c("even_or_odd.ex")
+    [EvenOrOdd]
+    > EvenOrOdd.check(3)
+    "odd"
+    > EvenOrOdd.check(2)
+    "even"
+
+Here, `require` has to be used, so that the `Integer` functions can be
+used at compile-time. Definitions added using `require` are lexically
+scoped, and, thus, only available in the respective scope.
+
+Guards can be re-used by defining them using the `defguard` keyword:
+
+    defmodule Checkout do
+      defguard is_rate(value) when is_float(value) and value >= 0 and value <= 1
+      defguard is_cents(value) when is_integer(value) and value >= 0
+
+      def total_cost(price, tax_rate) when is_cents(price) and is_rate(tax_rate) do
+        price + tax_cost(price, tax_rate)
+      end
+
+      def tax_cost(price, tax_rate) when is_cents(price) and is_rate(tax_rate) do
+        price * tax_rate
+      end
+    end
+
+    > c("checkout.ex")
+    [Checkout]
+    > Checkout.tax_cost(40, 0.1)
+    4.0
+    > Checkout.total_cost(40, 0.1)
+    44.0
