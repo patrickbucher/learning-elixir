@@ -614,3 +614,63 @@ Guards can be re-used by defining them using the `defguard` keyword:
     4.0
     > Checkout.total_cost(40, 0.1)
     44.0
+
+Multiple pattern-matching clauses can be checked using a `case`
+expression:
+
+    user_input = IO.gets "What's your IQ? "
+    case Integer.parse(user_input) do
+      :error -> IO.puts "Malformed IQ: #{user_input}"
+      {iq, _} -> IO.puts "Your IQ is #{iq}"
+    end
+
+The `case` expression returns a value:
+
+    user_input = IO.gets "What's your IQ? "
+    output = case Integer.parse(user_input) do
+      :error -> "Malformed IQ: #{user_input}"
+      {iq, _} -> "Your IQ is #{iq}"
+    end
+    IO.puts output
+
+Different variables and/or values can be checked usign `cond`:
+
+    {weight_kg, _} = Integer.parse(IO.gets("Weight [kg]: "))
+    {height_cm, _} = Integer.parse(IO.gets("Height [cm]: "))
+
+    height_m = height_cm / 100
+    height_square = height_m * height_m
+    bmi = weight_kg / height_square
+
+    result = cond do
+      bmi < 20 -> "BMI #{bmi} is underweight"
+      bmi <= 25 -> "BMI #{bmi} is good"
+      bmi > 25 -> "BMI #{bmi} is overweight"
+    end
+
+    IO.puts result
+
+`if`/`else` and `unless/else` can be used for simple (binary) checks:
+
+    a = 13
+    b = 3
+
+    bigger = if a > b do
+      a
+    else
+      b
+    end
+
+    smaller = unless a > b do
+      a
+    else
+      b
+    end
+
+    IO.puts "bigger: #{bigger}"
+    IO.puts "smaller: #{smaller}"
+
+They are actually implemented as macros and can be used as follows, too:
+
+  > bigger = if(a > b, do: a, else: b)
+  > smaller = unless(a > b, do: a, else: b)
