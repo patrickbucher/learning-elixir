@@ -672,5 +672,165 @@ Different variables and/or values can be checked usign `cond`:
 
 They are actually implemented as macros and can be used as follows, too:
 
-  > bigger = if(a > b, do: a, else: b)
-  > smaller = unless(a > b, do: a, else: b)
+    > bigger = if(a > b, do: a, else: b)
+    > smaller = unless(a > b, do: a, else: b)
+
+## Diving into Recursion
+
+The _boundary clause_ (trivial case) must always be listed before the
+case that applies repeatedly (general case):
+
+    defmodule Sum do
+      def up_to(0), do: 0
+      def up_to(n), do: n + up_to(n - 1)
+    end
+
+Lists are usually processed element by element by splitting the list's
+`head` from its `tail`:
+
+    defmodule Math do
+      def sum([]), do: 0
+      def sum([head | tail]), do: head + sum(tail)
+    end
+
+List can also be built by prepending elements using the `[head | tail]`
+syntax:
+
+    defmodule EnchanterShop do
+      def test_data do
+        [
+          %{title: "Longsword", price: 50, magic: false},
+          %{title: "Healing Potion", price: 60, magic: true},
+          %{title: "Rope", price: 10, magic: false},
+          %{title: "Dragon's Spear", price: 100, magic: true},
+        ]
+      end
+      
+      @enchanter_name "Edwin"
+      
+      def enchant_for_sale([]), do: []
+      def enchant_for_sale([item = %{magic: true} | incoming_items]) do
+        [item | enchant_for_sale(incoming_items)]
+      end
+      def enchant_for_sale([item | incoming_items]) do
+        new_item = %{
+          title: "#{@enchanter_name}'s #{item.title}",
+          price:  item.price * 3,
+          magic: true
+        }
+        [new_item | enchant_for_sale(incoming_items)]
+      end
+    end
+
+The second `enchant_for_sale` clause only matches on items having set
+the `magic` key to `true`. The third `enchant_for_sale` clause will
+therefore, implicitly, only process the items having set `magic` to
+`false`.
+
+The items of a map can also be accessed using their keys, either using
+square brackets (missing keys return `nil`) or using the dot notation
+(missing keys raise a `KeyError`)::
+
+    > [head | tail] = EnchanterShop.test_data
+
+    > head[:magic]
+    false
+    > head[:price]
+    50
+    > head[:title]
+    "Longsword"
+    > head[:size]
+    nil
+
+    > head.magic
+    false
+    > head.price
+    50
+    > head.title
+    "Longsword"
+    > head.size
+    ** (KeyError) key :size not found in: %{magic: false, price: 50, title: "Longsword"}
+
+A factorial function can be implemented using the _decrease and conquer_
+technique, where the problem left to be solved is decreased on every
+step:
+
+    defmodule Factorial do
+      def of(0), do: 1
+      def of(n) when n > 0, do: n * of(n - 1)
+    end
+
+A sort function, such as merge sort, can be implemented using the
+_divide and conquer_ technique, where the initial problem is divided
+into easier to solve sub-problems:
+
+    defmodule Sort do
+
+      def ascending([]), do: []
+      def ascending([a]), do: [a]
+      def ascending(list) do
+        half_size = div(Enum.count(list), 2)
+        {list_a, list_b} = Enum.split(list, half_size)
+        merge(ascending(list_a), ascending(list_b))
+      end
+
+      defp merge([], list_b), do: list_b
+      defp merge(list_a, []), do: list_a
+      defp merge([head_a | tail_a], list_b = [head_b | _]) when head_a <= head_b do
+        [head_a | merge(tail_a, list_b)]
+      end
+      defp merge(list_a = [head_a | _], [head_b | tail_b]) when head_a > head_b do
+        [head_b | merge(list_a, tail_b)]
+      end
+
+    end
+
+_Tail-recursive_ only have a single function call as their last step.
+Such functions can be optimized by the compiler. They often use
+additional _accumulator_ parameters:
+
+    defmodule TRFactorial do
+      def of(n), do: factorial_of(n, 1)
+      defp factorial_of(0, acc), do: acc
+      defp factorial_of(n, acc) when n > 0, do: factorial_of(n - 1, n * acc)
+    end
+
+The problem is reduced as `n` shrinks, and the accumulator storing the
+intermediate result, grows.
+
+Recursive structures, such as linked web pages or the file system, are
+best processed using recursive functions.
+
+    defmodule Navigator do
+
+      @max_depth 3
+
+      def navigate(dir) do
+        expanded_dir = Path.expand(dir)
+        go_through([expanded_dir], 0)
+      end
+
+      defp go_through([], _current_depth), do: nil
+      defp go_through(_dirs, current_depth) when current_depth > @max_depth, do: nil
+      defp go_through([content | rest], current_depth) do
+        print_and_navigate(content, File.dir?(content), current_depth)
+        go_through(rest, current_depth)
+      end
+
+      defp print_and_navigate(_dir, false, _current_depth), do: nil
+      defp print_and_navigate(dir, true, current_depth) do
+        IO.puts dir
+        children_dirs = File.ls!(dir)
+        go_through(expand_dirs(children_dirs, dir), current_depth + 1)
+      end
+
+      defp expand_dirs([], _relative_to), do: []
+      defp expand_dirs([dir | dirs], relative_to) do
+        expanded_dir = Path.expand(dir, relative_to)
+        [expanded_dir | expand_dirs(dirs, relative_to)]
+      end
+
+    end
+
+The `depth` of the recursion is restricted, adding a _boundary_ to the
+recursive problem.
