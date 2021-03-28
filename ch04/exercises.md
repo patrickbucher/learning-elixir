@@ -100,7 +100,7 @@ p. 80
 
     end
 
-# In the s ection...
+# In the section...
 
     defmodule BreadthNavigator do
 
