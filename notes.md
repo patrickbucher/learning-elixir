@@ -1,4 +1,4 @@
-# Elixir
+# Learn Functional Programming with Elixir
 
 Run Elixir's interactive shell:
 
@@ -834,3 +834,125 @@ best processed using recursive functions.
 
 The `depth` of the recursion is restricted, adding a _boundary_ to the
 recursive problem.
+
+## Using Higher-Order Functions
+
+Higher-Order functions accept other functions as parameters, and/or
+return functions.
+
+The `each` function applies the given function (second parameter) to
+each item in the list (first parameter):
+
+    defmodule MyList do
+      def each([], _function), do: nil
+      def each([head | tail], function) do
+        function.(head)
+        each(tail, function)
+      end
+    end
+
+It can be used as follows to output all the list items:
+
+    > c("my_list.ex")
+    > MyList.each(["Alice", "Bob", "Mallory"], fn item -> IO.puts item end)
+    Alice
+    Bob
+    Mallory
+    nil
+
+The `map` function transforms a given list by applying the given
+function to each element:
+
+    def map([], _function), do: []
+    def map([head | tail], function) do
+      [function.(head) | map(tail, function)]
+    end
+
+    > MyList.map(["Alice", "Bob", "Mallory"], fn item -> String.length(item) end)
+    [5, 3, 7]
+
+    > MyList.map(["Alice", "Bob", "Mallory"], &String.length/1)
+    [5, 3, 7]
+
+    > discount = fn item -> update_in(item.price, &(&1 * 0.9)) end
+    > items = [%{name: "Beer", price: 2.50}, %{name: "Water", price: 1.20}]
+    > MyList.map(items, discount)
+    [%{name: "Beer", price: 2.25}, %{name: "Water", price: 1.08}]
+
+The `reduce` function computes an aggregate value over a given list. The
+accumulator is used both for storing intermediate results, and to
+initialize a neutral element:
+
+    def reduce([], acc, _function), do: acc
+    def reduce([head | tail], acc, function) do
+      reduce(tail, function.(head, acc), function)
+    end
+
+    > MyList.reduce([1, 2, 3, 4], 0, &(&1 + &2))
+    10
+    > MyList.reduce([1, 2, 3, 4], 1, &(&1 * &2))
+    24
+    > MyList.reduce([1, 2, 3, 4], 0, &+/2)
+    10
+    > MyList.reduce([1, 2, 3, 4], 1, &*/2)
+    24
+
+The `filter` function applies a predicate function on every item, and
+produces a list only consisting of the items for with the predicate
+holds true:
+
+    def filter([], _function), do: []
+    def filter([head | tail], function) do
+      if function.(head) do
+        [head | filter(tail, function)]
+      else
+        filter(tail, function)
+      end
+    end
+
+    > MyList.filter([1, 2, 3, 4, 5, 6], &(rem(&1, 2) == 0))
+    [2, 4, 6]
+
+These functions, and many more, are all available in the `Enum` module:
+
+- `Enum.each/2`
+- `Enum.map/2`
+- `Enum.reduce/2` (without neutral element)
+- `Enum.reduce/3` (with neutral element)
+- `Enum.filter/2`
+- `Enum.count/1`
+- `Enum.sort/2`
+- `Enum.sum/1`
+- `Enum.uniq/1`
+- `Enum.member?/2`
+- `Enum.join/2`
+
+`Enum`'s functions work with any type respecting the `Enumerable`
+protocol (lists, maps, tuples, etc.).
+
+Some functions require multiple functions as parameters. The `group_by`
+function needs one function to extract a grouping criterion, and one
+function to extract an identifier from the items:
+
+    employees = [
+      %{department: :engineering, name: "Dilbert"},
+      %{department: :management, name: "Pointy Haired Boss"},
+      %{department: :engineering, name: "Wally"},
+      %{department: :hr, name: "Catbert"},
+      %{department: :marketing, name: "Ted"},
+      %{department: :management, name: "Egghead"},
+      %{department: :engineering, name: "Alice"},
+    ]
+
+    departments = Enum.group_by(employees, &(&1.department), &(&1.name))
+    IO.inspect departments
+
+Output:
+
+  $ elixir departments.exs
+    %{
+      engineering: ["Dilbert", "Wally", "Alice"],
+      hr: ["Catbert"],
+      management: ["Pointy Haired Boss", "Egghead"],
+      marketing: ["Ted"]
+    }
