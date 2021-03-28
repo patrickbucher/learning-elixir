@@ -74,10 +74,28 @@ p. 80
       defp merge(list_a, [], _before), do: list_a
       defp merge(l_a = [h_a | t_a], l_b = [h_b | t_b], before) do
         if before.(h_a, h_b) do
-            [h_a | merge(t_a, l_b, before)]
+          [h_a | merge(t_a, l_b, before)]
         else
-            [h_b | merge(l_a, t_b, before)]
+          [h_b | merge(l_a, t_b, before)]
         end
       end
+
+    end
+
+# We've written...
+
+    defmodule Sum do
+      def up_to(n), do: sum(n, 0)
+
+      defp sum(0, acc), do: acc
+      defp sum(n, acc), do: sum(n - 1, acc + n)
+    end
+
+    defmodule Math do
+      def sum([]), do: 0
+      def sum(list), do: sum_acc(list, 0)
+
+      defp sum_acc([], acc), do: acc
+      defp sum_acc([head | tail], acc), do: sum_acc(tail, head + acc)
 
     end
