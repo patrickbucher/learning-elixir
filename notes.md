@@ -956,3 +956,31 @@ Output:
       management: ["Pointy Haired Boss", "Egghead"],
       marketing: ["Ted"]
     }
+
+List comprehensions are created using the `for` form and one or mor
+generator expressions:
+
+    > for i <- [1, 2, 3, 4, 5], do: i * i
+    [1, 4, 9, 16, 25]
+
+Multiple generator expressions can be used to build the _carthesian
+product_ (i.e. all combinations) of the listed items:
+
+    > for a <- ["1", "2", "3"], b <- ["a", "b", "c"], do: a <> b
+    ["1a", "1b", "1c", "2a", "2b", "2c", "3a", "3b", "3c"]
+
+Conditions can be used to restrict the items going into the result list:
+
+    > for i <- [1, 2, 3, 4, 5, 6], rem(i, 2) == 0, do: i
+    [2, 4, 6]
+
+Functions can be composed using the pipe operator `|>`:
+
+    > "test" |> String.first |> String.upcase
+    "T"
+
+    > "to kill a mockingbird"
+      |> String.split
+      |> Enum.map(&String.capitalize/1)
+      |> Enum.join(" ")
+    "To Kill A Mockingbird"
