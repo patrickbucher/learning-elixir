@@ -984,3 +984,195 @@ Functions can be composed using the pipe operator `|>`:
       |> Enum.map(&String.capitalize/1)
       |> Enum.join(" ")
     "To Kill A Mockingbird"
+
+Instead of currying, functions can be partially applied using closures. The
+`String.at` function is partially applied with `alphabet`, and can later be u
+sed by calling `partial`.
+
+    defmodule WordBuilder do
+      def build(alphabet, positions) do
+        partial = fn at -> String.at(alphabet, at) end
+        letters = Enum.map(positions, partial)
+        Enum.join(letters)
+      end
+    end
+
+The same can be expressed using function-capturing syntax:
+
+    defmodule WordBuilder do
+      def build(alphabet, positions) do
+        letters = Enum.map(positions, &(String.at(alphabet, &1)))
+        Enum.join(letters)
+      end
+    end
+
+Infinite collections of data are possible using lazy evaluation and the `Stream`
+module. Simple streams can be expressed using the range literal:
+
+    > numbers = 1..10
+    > Enum.each(1..10, &IO.puts/1)
+    1
+    2
+    ...
+    10
+    :ok
+
+The factorial can be computed as follows using ranges:
+
+    defmodule Factorial do
+      def of(0), do: 1
+      def of(n) when n > 0 do
+        1..10_000_000
+          |> Enum.take(n)
+          |> Enum.reduce(&(&1 * &2))
+      end
+    end
+
+Ranges are only evaluated as needed. An infinite stream of numbers can be
+created as follows:
+
+    > integers = Stream.iterate(1, fn prev -> prev + 1 end)
+    > Enum.take(integers, 3)
+    [1, 2, 3]
+
+Which can be used to re-factor the factorial implementation from above:
+
+    defmodule Factorial do
+      def of(0), do: 1
+      def of(n) when n > 0 do
+        Stream.iterate(1, fn prev -> prev + 1 end)
+          |> Enum.take(n)
+          |> Enum.reduce(&(&1 * &2))
+      end
+    end
+
+It's possible to cycle endlessly through an enumeration (`halloween.ex`):
+
+    defmodule Halloween do
+      def give_candy(kids) do
+        ~w(chocolate jelly mint)
+          |> Stream.cycle
+          |> Enum.zip(kids)
+      end
+    end
+
+    > c("halloween.ex")
+    Halloween.give_candy(~w(Alice Bob Carol Dan Enia Frank))
+    [
+      {"chocolate", "Alice"},
+      {"jelly", "Bob"},
+      {"mint", "Carol"},
+      {"chocolate", "Dan"},
+      {"jelly", "Enia"},
+      {"mint", "Frank"}
+    ]
+
+There are two ways a list of items can be processed by a pipeline of functions:
+
+1. Eager: Every function processes the whole list and sends the result to the
+   next function.
+2. Lazy: A function only processes a finite amount of items and sends the
+   partial result to the next function.
+
+While the first approach makes sense for very small tasks, the second approach
+produces results earlier for further processing.
+
+`ScrewsFactory` (`screws_factory.ex`) simulates the process of producing screws
+from metal pieces, here with the first (eager) approach:
+
+    defmodule ScrewsFactory do
+
+      def run(pieces) do
+        pieces
+        |> Enum.map(&add_thread/1)
+        |> Enum.map(&add_head/1)
+        |> Enum.each(&output/1)
+      end
+
+      defp add_thread(piece) do
+        Process.sleep(50)
+        piece <> "--"
+      end
+
+      defp add_head(piece) do
+        Process.sleep(100)
+        "o" <> piece
+      end
+
+      defp output(screw) do
+        IO.inspect(screw)
+      end
+
+    end
+
+    > c("screws_factory.ex")
+    > metal_pieces = Enum.take(Stream.cycle(["-"]), 10)
+    ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-"]
+    > ScrewsFactory.run(metal_pieces)
+    "o---"
+    "o---"
+    "o---"
+    "o---"
+    "o---"
+    "o---"
+    "o---"
+    "o---"
+    "o---"
+    "o---"
+    :ok
+
+First, nothing happens, then, all of a sudden, the ten screws appear.
+
+The `run` function can be changed as follows in order to use lazy evaluation:
+
+    defmodule ScrewsFactory do
+
+      def run(pieces) do
+        pieces
+        |> Stream.map(&add_thread/1)
+        |> Stream.map(&add_head/1)
+        |> Enum.each(&output/1)
+      end
+
+    # ...
+
+By chunking the list of pieces, each function can process a partial list instead
+of only a single element:
+
+    defmodule ScrewsFactory do
+
+      def run(pieces) do
+        pieces
+        |> Stream.chunk_every(50)
+        |> Stream.flat_map(&add_thread/1)
+        |> Stream.chunk_every(100)
+        |> Stream.flat_map(&add_head/1)
+        |> Enum.each(&output/1)
+      end
+
+      defp add_thread(pieces) do
+        Process.sleep(50)
+        Enum.map(pieces, &(&1 <> "--"))
+      end
+
+      defp add_head(pieces) do
+        Process.sleep(100)
+        Enum.map(pieces, &("o" <> &1))
+      end
+
+      defp output(screw) do
+        IO.inspect(screw)
+      end
+
+    end
+
+`Enum.chunk` is the eager version of the same concept:
+
+    > Enum.chunk(1..6, 2)
+    [[1, 2], [3, 4], [5, 6]]
+
+`Enum.flat_map` does the opposite:
+
+    > chunks = Enum.chunk(1..6, 2)
+    > Enum.flat_map(chunks, &(&1))
+    [1, 2, 3, 4, 5, 6]
