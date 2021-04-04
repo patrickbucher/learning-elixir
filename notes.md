@@ -1176,3 +1176,62 @@ of only a single element:
     > chunks = Enum.chunk(1..6, 2)
     > Enum.flat_map(chunks, &(&1))
     [1, 2, 3, 4, 5, 6]
+
+## Designing Your Elixir Applications
+
+Create a new application using `mix`:
+
+    $ mix new dungeon_crawl
+    $ cd dungeon_crawl
+
+Run the tests:
+
+    $ mix test
+
+New mix tasks can be created under `lib/mix/tasks`, e.g. `start.ex`:
+
+    defmodule Mix.Tasks.Start do
+      use Mix.Task
+
+      def run(_), do: IO.puts "Hello, World!"
+    end
+
+The task can be run as follows:
+
+    $ mix start
+    Compiling 2 files (.ex)
+    Generated dungeon_crawl app
+    Hello, World!
+
+The task function `run` must be part of the `Mix.Tasks` module and accept a
+single argument.
+
+New structs can be defined using `defstruct`
+(`dungeon_crawl/lib/dungeon_crawl/character.ex`):
+
+    defmodule DungeonCrawl.Character do
+      defstruct name: nil,
+        description: nil,
+        hit_points: 0,
+        max_hit_points: 0,
+        attack_description: nil,
+        damage_range: nil
+    end
+
+Load all modules automatically using `mix` (in the project's root folder):
+
+    $ iex -S mix
+
+A struct can be created as follows:
+
+    > warrior = %DungeonCrawl.Character{name: "Warrior"}
+    %DungeonCrawl.Character{
+      attack_description: nil,
+      damage_range: nil,
+      description: nil,
+      hit_points: 0,
+      max_hit_points: 0,
+      name: "Warrior"
+    }
+    > warrior.name
+    "Warrior"
