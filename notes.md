@@ -1235,3 +1235,5 @@ A struct can be created as follows:
     }
     > warrior.name
     "Warrior"
+
+_lost me on page 129, I'm done with this book, sorry_

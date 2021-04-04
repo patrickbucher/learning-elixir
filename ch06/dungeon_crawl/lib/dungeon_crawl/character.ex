@@ -1,4 +1,12 @@
 defmodule DungeonCrawl.Character do
+  @type t :: %DungeonCrawl.Character{
+    name: String.t,
+    description: String.t,
+    hit_points: non_neg_integer,
+    max_hit_points: non_neg_integer,
+    attack_description: String.t,
+    damage_range:  Range.t
+  }
   defstruct name: nil,
     description: nil,
     hit_points: 0,
