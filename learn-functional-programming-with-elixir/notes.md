@@ -986,8 +986,8 @@ Functions can be composed using the pipe operator `|>`:
     "To Kill A Mockingbird"
 
 Instead of currying, functions can be partially applied using closures. The
-`String.at` function is partially applied with `alphabet`, and can later be u
-sed by calling `partial`.
+`String.at` function is partially applied with `alphabet`, and can later be used
+by calling `partial`.
 
     defmodule WordBuilder do
       def build(alphabet, positions) do
