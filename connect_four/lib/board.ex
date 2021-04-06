@@ -1,11 +1,12 @@
 defmodule Board do
   @n_cols 7
   @n_rows 6
+  @empty :_
 
   def empty do
     row =
       for _ <- 0..(@n_cols - 1), into: [] do
-        :e
+        @empty
       end
 
     for _ <- 0..(@n_rows - 1), into: [] do
@@ -63,8 +64,20 @@ defmodule Board do
     Enum.map(indices, pick(board))
   end
 
-  def pick(board) do
+  defp pick(board) do
     fn {y, x} -> board |> Enum.at(y) |> Enum.at(x) end
+  end
+
+  def set(board, slot, token) do
+    c = col(board, slot)
+    if @empty not in c do
+      {:error, :no_empty_slot}
+    else
+      x = Enum.find(c, @n_rows, fn e -> e != @empty end) - 1
+      r = row(board, x)
+      r = List.replace_at(r, slot, token)
+      {:ok, List.replace_at(board, x, r)}
+    end
   end
 
 end
